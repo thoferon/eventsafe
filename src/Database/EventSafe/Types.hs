@@ -1,4 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Database.EventSafe.Types
   ( ResourceRef(..)
@@ -23,7 +24,7 @@ class Resource e res where
   buildResource [] = Nothing
   buildResource (fe:es) = foldl' (\mres e -> mres >>= applyEvent e) (firstEvent fe) es
 
-class EventPool p where
+class EventPool p e where
   filterEvents :: ResourceRef e ref => p e -> ref -> [e]
   addEvent     :: p e -> e -> p e
 
@@ -32,10 +33,10 @@ class EventPool p where
 
 class Ord e => StorableEvent e where
   encode :: e -> BSL.ByteString
-  decode :: BSL.ByteString -> e
+  decode :: BSL.ByteString -> Maybe e
 
 -- * Instances
 
-instance EventPool [] where
+instance Ord e => EventPool [] e where
   filterEvents pool ref = filter (flip concerns ref) pool
-  addEvent events event = events ++ [event]
+  addEvent = flip insert

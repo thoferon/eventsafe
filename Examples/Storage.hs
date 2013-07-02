@@ -11,11 +11,13 @@ import System.Directory
 import System.IO.Temp
 import GHC.Generics
 import Data.Time
+import Data.String
 import qualified Data.Aeson as Json
 import Control.Applicative
 
 newtype Email = Email String deriving (Show, Eq, Generic)
 instance Json.ToJSON Email
+instance Json.FromJSON Email
 
 data User = User {
   userEmail       :: Email
@@ -25,6 +27,7 @@ data User = User {
 
 newtype PostId = PostId Int deriving (Show, Eq, Generic)
 instance Json.ToJSON PostId
+instance Json.FromJSON PostId
 
 data Post = Post {
   postId            :: PostId
@@ -39,9 +42,11 @@ data Event
   deriving (Show, Eq, Generic)
 
 instance Json.ToJSON Event
+instance Json.FromJSON Event
 
 instance StorableEvent Event where
   encode = Json.encode
+  decode = Json.decode
 
 instance Ord Event where
   e1 `compare` e2 = getTime e1 `compare` getTime e2
@@ -85,12 +90,15 @@ main :: IO ()
 main = do
   hSetBuffering stdout NoBuffering
   tvar <- newTVarIO []
-  withSystemTempDirectory "eventsafe-examples-storage" $ \dir -> do
-    createDirectoryIfMissing True dir
-    putStrLn $ "Storage in " ++ dir
-    let storage = EventStorage tvar dir
-    loadStorage storage
-    handleQuery storage
+
+  putStr "Storage location: "
+  dir <- getLine
+  createDirectoryIfMissing True dir
+
+  let storage = EventStorage tvar $ fromString dir
+  loadStorage storage
+
+  handleQuery storage
 
 handleQuery :: EventStorage [] Event -> IO ()
 handleQuery storage = do
