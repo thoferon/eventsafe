@@ -1,5 +1,4 @@
 module Database.EventSafe
-  -- * Types and typeclasses
   ( ResourceRef(..)
   , Resource(..)
   , EventPool(..)

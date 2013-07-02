@@ -4,7 +4,9 @@ module Examples.Simple where
 
 import Database.EventSafe
 
-newtype Email = Email String deriving (Show, Eq)
+-- Don't bother about 'Ord' yet. It's used for 'addEvent' which is not used here.
+
+newtype Email = Email String deriving (Show, Eq, Ord)
 
 data User = User {
   userEmail       :: Email
@@ -12,7 +14,7 @@ data User = User {
   , userPostCount :: Int
 } deriving (Show, Eq)
 
-newtype PostId = PostId Int deriving (Show, Eq)
+newtype PostId = PostId Int deriving (Show, Eq, Ord)
 
 data Post = Post {
   postId            :: PostId
@@ -24,7 +26,7 @@ data Event
   = UserCreation Email String
   | UserChangePassword Email String
   | PostCreation PostId Email String
-  deriving (Show, Eq)
+  deriving (Show, Eq, Ord)
 
 events :: [Event]
 events = [
