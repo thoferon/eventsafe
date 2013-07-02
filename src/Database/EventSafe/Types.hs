@@ -4,9 +4,13 @@ module Database.EventSafe.Types
   ( ResourceRef(..)
   , Resource(..)
   , EventPool(..)
+  , StorableEvent(..)
   ) where
 
 import Data.List
+import qualified Data.ByteString.Lazy as BSL
+
+-- * Typeclasses
 
 class ResourceRef e ref where
   concerns :: e -> ref -> Bool
@@ -25,6 +29,12 @@ class EventPool p where
 
   getResource  :: (ResourceRef e ref, Resource e res) => p e -> ref -> Maybe res
   getResource pool ref = buildResource $ filterEvents pool ref
+
+class Ord e => StorableEvent e where
+  encode :: e -> BSL.ByteString
+  decode :: BSL.ByteString -> e
+
+-- * Instances
 
 instance EventPool [] where
   filterEvents pool ref = filter (flip concerns ref) pool

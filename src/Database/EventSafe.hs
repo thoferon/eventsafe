@@ -3,22 +3,20 @@ module Database.EventSafe
   ( ResourceRef(..)
   , Resource(..)
   , EventPool(..)
+  , EventStorage(..)
+  , StorableEvent(..)
+  , ESTVar
+  -- * STM transactions to read and write events
+  , writeEventSTM
   -- * IO actions to deal with concurrency
+  , readResourceMem
+  , writeEventMem
+  -- * IO actions for storage
   , readResource
   , writeEvent
+  , loadStorage
   ) where
 
-import Control.Concurrent.STM
-
 import Database.EventSafe.Types
-
-readResource :: (ResourceRef e ref, Resource e res, EventPool p)
-             => TVar (p e) -> ref -> IO (Maybe res)
-readResource poolVar ref = do
-  pool <- atomically $ readTVar poolVar
-  return $ getResource pool ref
-
-writeEvent :: EventPool p => TVar (p e) -> e -> IO ()
-writeEvent poolVar event = atomically $ do
-  pool <- readTVar poolVar
-  writeTVar poolVar $ addEvent pool event
+import Database.EventSafe.Conc
+import Database.EventSafe.Storage
