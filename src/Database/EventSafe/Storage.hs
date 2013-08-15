@@ -1,6 +1,3 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE OverloadedStrings #-}
-
 module Database.EventSafe.Storage
   ( EventStorage(..)
   , readResource
@@ -11,7 +8,6 @@ module Database.EventSafe.Storage
 import Prelude hiding (FilePath, readFile)
 
 import Data.Digest.Pure.MD5 (md5)
-import Data.String (IsString(..))
 import qualified Data.ByteString.Lazy as BSL
 
 import Filesystem
@@ -39,20 +35,14 @@ readResource (EventStorage tvar _) = readResourceMem tvar
 -- The event will be written in memory AND on disk.
 writeEvent :: (EventPool p e, StorableEvent e) => EventStorage p e -> e -> IO ()
 writeEvent (EventStorage tvar path) event = do
-#ifdef __GLASGOW_HASKELL__
-  -- TODO: make it a transaction with unsafeIOToSTM
   writeEventToDir path event
   writeEventMem tvar event
-#else
-  writeEventToDir path event
-  writeEventMem tvar event
-#endif
 
 writeEventToDir :: StorableEvent e => FilePath -> e -> IO ()
 writeEventToDir dir event = do
   let encodedEvent = encode event
       md5Hash      = show $ md5 encodedEvent
-      path         = dir </> fromString md5Hash
+      path         = dir </> decodeString md5Hash
   withFile path AppendMode $ flip BSL.hPut encodedEvent
 
 -- | Load events stored on disk into memory.
