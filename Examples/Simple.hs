@@ -4,8 +4,6 @@ module Examples.Simple where
 
 import Database.EventSafe
 
--- Don't bother about 'Ord' yet. It's used for 'addEvent' which is not used here.
-
 newtype Email = Email String deriving (Show, Eq, Ord)
 
 data User = User {

@@ -16,7 +16,9 @@ data User = User {
   userEmail       :: Email
   , userPassword  :: String
   , userPostCount :: Int
-} deriving (Show, Eq)
+} deriving (Show, Eq, Generic)
+instance Json.ToJSON User
+instance Json.FromJSON User
 
 newtype PostId = PostId Int deriving (Show, Eq, Generic)
 instance Json.ToJSON PostId
@@ -26,7 +28,9 @@ data Post = Post {
   postId            :: PostId
   , postAuthorEmail :: Email
   , postTitle       :: String
-} deriving (Show, Eq)
+} deriving (Show, Eq, Generic)
+instance Json.ToJSON Post
+instance Json.FromJSON Post
 
 data Event
   = UserCreation String Email String

@@ -3,26 +3,44 @@
 
 name:                eventsafe
 version:             0.1.0.0
-synopsis:            A prototype of type-safe event store (just for fun)
--- description:
+synopsis:            A type-safe event store library
+description:         EventSafe is a small library allowing to quickly build HTTP servers to manage events and resources. You can write events in an event store and retrieve a resource from those events given a resource reference.
 homepage:            http://hub.darcs.net/thoferon/eventsafe
+bug-reports:         http://hub.darcs.net/thoferon/eventsafe/issues
 license:             MIT
 license-file:        LICENSE
 author:              Thomas Feron
 maintainer:          tho.feron@gmail.com
--- copyright:
+stability:           experimental
 category:            Database
 build-type:          Simple
 cabal-version:       >=1.8
 
 library
-  exposed-modules:   Database.EventSafe, Database.EventSafe.Types
-                   , Database.EventSafe.Conc, Database.EventSafe.Storage
+  exposed-modules:   Database.EventSafe
+                   , Database.EventSafe.Types
+                   , Database.EventSafe.Conc
+                   , Database.EventSafe.Storage
+                   , Database.EventSafe.HTTP
   hs-source-dirs:    src
   ghc-options:       -Wall
-  build-depends:     base ==4.5.*
+  build-depends:     base >= 4 && < 5
                    , pureMD5 ==2.1.*
                    , system-filepath ==0.4.*
                    , system-fileio ==0.3.*
-                   , bytestring
+                   , bytestring ==0.9.*
                    , stm ==2.4.*
+                   , wai ==1.4.*
+                   , warp ==1.3.*
+                   , http-types
+                   , blaze-builder
+                   , template-haskell ==2.7.*
+                   , conduit ==1.0.*
+                   , text ==0.11.*
+                   , aeson ==0.6.*
+                   , mtl
+                   , attoparsec-conduit ==1.0.*
+
+source-repository head
+  type:              darcs
+  location:          http://hub.darcs.net/thoferon/eventsafe

@@ -1,5 +1,6 @@
 module Database.EventSafe.Storage
   ( EventStorage(..)
+  , newEventStorage
   , readResource
   , writeEvent
   , loadStorage
@@ -13,6 +14,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Filesystem
 import Filesystem.Path.CurrentOS hiding (encode, decode)
 
+import Control.Concurrent.STM
 import Control.Monad
 
 import Database.EventSafe.Conc
@@ -24,6 +26,14 @@ data EventStorage p e
   -- the second is the directory those events should be read from / written to.
   = EventStorage (ESTVar p e) FilePath
   deriving Eq
+
+-- | Convenient function to create a new 'EventStorage'.
+--
+-- ALWAYS initialise with an empty pool.
+newEventStorage :: EventPool p e => p e -> FilePath -> IO (EventStorage p e)
+newEventStorage pool path = do
+  tvar <- newTVarIO pool
+  return $ EventStorage tvar path
 
 -- | Read a resource corresponding to a specific reference from an 'EventStorage'.
 readResource :: (ResourceRef e ref, Resource e res, EventPool p e)

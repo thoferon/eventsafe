@@ -11,11 +11,17 @@ module Database.EventSafe
   , readResourceMem
   , writeEventMem
   -- * IO actions for storage
+  , newEventStorage
   , readResource
   , writeEvent
   , loadStorage
+  -- * Template Haskell
+  , mkApp
+  , AppConfig(..)
+  , ResourceEndpoint(..)
   ) where
 
 import Database.EventSafe.Types
 import Database.EventSafe.Conc
 import Database.EventSafe.Storage
+import Database.EventSafe.HTTP
