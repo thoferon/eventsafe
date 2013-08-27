@@ -203,7 +203,7 @@ mkResourceAppExp endpoint = do
   show404ErrorE         <- [| show404Error |]
   returnEncodedFunE     <- [| return . ResponseBuilder ok200 [] . fromLazyByteString. J.encode |]
   stringT               <- [t| String |]
-  show400ErrorRefErrorE <- [| show400Error . (\errToBePacked -> "{\"error\":\"ref_error\",\"detail\"" <> BSL.pack errToBePacked <> "\"}") |]
+  show400ErrorRefErrorE <- [| show400Error . (\errToBePacked -> "{\"error\":\"ref_error\",\"detail\":\"" <> BSL.pack errToBePacked <> "\"}") |] -- FIXME : Remove this horror
 
   let mRefParamN          = mkName "mRefParam"
       refParamN           = mkName "refParam"
