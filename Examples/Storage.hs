@@ -17,13 +17,12 @@ import Examples.Shared
 main :: IO ()
 main = do
   hSetBuffering stdout NoBuffering
-  tvar <- newTVarIO []
 
   putStr "Storage location: "
   dir <- getLine
   createDirectoryIfMissing True dir
 
-  let storage = EventStorage tvar $ fromString dir
+  storage <- newEventStorage dir
   loadStorage storage
 
   handleQuery storage
@@ -49,7 +48,7 @@ newEvent storage = do
       putStr "Password: "
       pwd <- getLine
       time <- show <$> getCurrentTime
-      writeEvent storage $ UserCreation time (Email email) pwd
+      addEventM storage $ UserCreation time (Email email) pwd
       putStrLn "User created."
     "2" -> do
       putStr "Email: "
@@ -57,7 +56,7 @@ newEvent storage = do
       putStr "Password: "
       pwd <- getLine
       time <- show <$> getCurrentTime
-      writeEvent storage $ UserChangePassword time (Email email) pwd
+      addEventM storage $ UserChangePassword time (Email email) pwd
       putStrLn "Password changed."
     "3" -> do
       putStr "Id (number please): "
@@ -67,7 +66,7 @@ newEvent storage = do
       putStr "Title: "
       title <- getLine
       time <- show <$> getCurrentTime
-      writeEvent storage $ PostCreation time (PostId . read $ postIdStr) (Email email) title
+      addEventM storage $ PostCreation time (PostId . read $ postIdStr) (Email email) title
       putStrLn "Post created."
     _ -> putStrLn "Unrecognized sequence."
 
@@ -79,11 +78,11 @@ getRes events = do
     "1" -> do
       putStr "Email: "
       email <- getLine
-      mres <- readResource events (Email email) :: IO (Maybe User)
+      mres <- getResourceM events (Email email) :: IO (Maybe User)
       print mres
     "2" -> do
       putStr "Post Id (number please): "
       postIdStr <- getLine
-      mres <- readResource events (PostId . read $ postIdStr) :: IO (Maybe Post)
+      mres <- getResourceM events (PostId . read $ postIdStr) :: IO (Maybe Post)
       print mres
     _ -> putStrLn "Unrecognized sequence."

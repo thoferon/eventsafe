@@ -18,10 +18,10 @@ import Examples.Shared
 main :: IO ()
 main = do
   hSetBuffering stdout NoBuffering
-  events <- newTVarIO []
+  events <- emptyPoolM
   handleQuery events
 
-handleQuery :: TVar [Event] -> IO ()
+handleQuery :: ESTVar [] Event -> IO ()
 handleQuery events = do
   putStr "(1) New event\n(2) Get resource\nYour choice: "
   choice <- getLine
@@ -31,7 +31,7 @@ handleQuery events = do
     _   -> putStrLn "Unrecognized sequence."
   handleQuery events
 
-newEvent :: TVar [Event] -> IO ()
+newEvent :: ESTVar [] Event -> IO ()
 newEvent events = do
   putStr "(1) New user\n(2) Change password\n(3) New post\nYour choice: "
   choice <- getLine
@@ -42,7 +42,7 @@ newEvent events = do
       putStr "Password: "
       pwd <- getLine
       time <- show <$> getCurrentTime
-      writeEventMem events $ UserCreation time (Email email) pwd
+      addEventM events $ UserCreation time (Email email) pwd
       putStrLn "User created."
     "2" -> do
       putStr "Email: "
@@ -50,7 +50,7 @@ newEvent events = do
       putStr "Password: "
       pwd <- getLine
       time <- show <$> getCurrentTime
-      writeEventMem events $ UserChangePassword time (Email email) pwd
+      addEventM events $ UserChangePassword time (Email email) pwd
       putStrLn "Password changed."
     "3" -> do
       putStr "Id (number please): "
@@ -60,11 +60,11 @@ newEvent events = do
       putStr "Title: "
       title <- getLine
       time <- show <$> getCurrentTime
-      writeEventMem events $ PostCreation time (PostId . read $ postIdStr) (Email email) title
+      addEventM events $ PostCreation time (PostId . read $ postIdStr) (Email email) title
       putStrLn "Post created."
     _ -> putStrLn "Unrecognized sequence."
 
-getRes :: TVar [Event] -> IO ()
+getRes :: ESTVar [] Event -> IO ()
 getRes events = do
   putStr "(1) Get a user\n(2) Get a post\nYour choice: "
   choice <- getLine
@@ -72,11 +72,11 @@ getRes events = do
     "1" -> do
       putStr "Email: "
       email <- getLine
-      mres <- readResourceMem events (Email email) :: IO (Maybe User)
+      mres <- getResourceM events (Email email) :: IO (Maybe User)
       print mres
     "2" -> do
       putStr "Post Id (number please): "
       postIdStr <- getLine
-      mres <- readResourceMem events (PostId . read $ postIdStr) :: IO (Maybe Post)
+      mres <- getResourceM events (PostId . read $ postIdStr) :: IO (Maybe Post)
       print mres
     _ -> putStrLn "Unrecognized sequence."

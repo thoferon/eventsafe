@@ -8,7 +8,6 @@ module Database.EventSafe.HTTP
   ) where
 
 import           Control.Monad              (unless)
-import           Control.Monad.Trans
 
 import           Data.Aeson                 hiding (encode, decode)
 import           Data.Conduit
@@ -18,8 +17,7 @@ import qualified Data.Aeson                 as J
 import qualified Data.ByteString.Char8      as BS
 import qualified Data.ByteString.Lazy.Char8 as BSL
 
-import qualified Filesystem                 as FSP
-import qualified Filesystem.Path.CurrentOS  as FSP
+import           System.Directory
 
 import           Database.EventSafe.Storage
 import           Database.EventSafe.Types
@@ -54,7 +52,7 @@ data ResourceEndpoint = ResourceEndpoint
 -- | Configuration of the application to pass to 'mkApp'.
 data AppConfig = AppConfig
   { eventType   :: String             -- ^ Type of the events
-  , storagePath :: FSP.FilePath       -- ^ Path where to store the events
+  , storagePath :: FilePath           -- ^ Path where to store the events
   , resources   :: [ResourceEndpoint] -- ^ List of the endpoints to get the resources
   }
 
@@ -62,13 +60,12 @@ data AppConfig = AppConfig
 --
 -- > do
 -- >   let app = ... -- see mkWaiApp
--- >   storage <- stdInitStorage (FSP.decodeString "/path/to/storage") :: IO (EventStorage [] YourEventType)
+-- >   storage <- stdInitStorage "/path/to/storage" :: IO (EventStorage [] YourEventType)
 -- >   return (app storage)
 mkApp :: AppConfig -> Q Exp
 mkApp config = do
   eventStorageT   <- [t| EventStorage |]
   stdInitStorageE <- [| stdInitStorage |]
-  decodeStringE   <- [| FSP.decodeString |]
 
   appE' <- mkWaiApp config
 
@@ -80,9 +77,7 @@ mkApp config = do
                             (NormalB appE')
                             []
                         ]
-      reqPathE      = AppE
-                        decodeStringE
-                        (LitE (StringL (FSP.encodeString $ storagePath config)))
+      reqPathE      = LitE (StringL (storagePath config))
       eventTypeN    = mkName $ eventType config
       storageT      = AppT
                         (ConT (mkName "IO"))
@@ -188,14 +183,13 @@ mkResourceApp endpoint = do
 -- >       case eRef :: Either String YourResourceRef of
 -- >         Left err  -> show400Error $ "{\"error\":\"ref_error\",\"detail\":\"" ++ BSL.pack err ++ "\"}"
 -- >         Right ref ->  do
--- >           mRes <- liftIO $ readResource storage ref
+-- >           mRes <- getResourceM storage ref
 -- >           case mRes :: Maybe YourResource of
 -- >             Nothing  -> show404Error
 -- >             Just res -> return . ResponseBuilder ok200 [] . fromLazyByteString. J.encode $ res
 mkResourceAppExp :: ResourceEndpoint -> Q Exp
 mkResourceAppExp endpoint = do
-  liftIOE               <- [| liftIO |]
-  readResourceE         <- [| readResource |]
+  getResourceME         <- [| getResourceM |]
   getRefParamE          <- [| (>>= id) . lookup "ref" . queryString |]
   maybeT                <- [t| Maybe |]
   nothingP              <- [p| Nothing |]
@@ -228,9 +222,8 @@ mkResourceAppExp endpoint = do
                               , Match (ConP (mkName "Right") [VarP refN]) (NormalB thirdDoE) []
                               ]
 
-      liftedReadResourceE = AppE liftIOE
-                              (AppE (AppE readResourceE storageE) (VarE refN))
-      thirdDoE            = DoE [ BindS (VarP mResN) liftedReadResourceE
+      resourceE           = AppE (AppE getResourceME storageE) (VarE refN)
+      thirdDoE            = DoE [ BindS (VarP mResN) resourceE
                                 , NoBindS thirdCaseStmtE
                                 ]
       mResT               = AppT maybeT . ConT . mkName $ resourceType endpoint
@@ -261,17 +254,17 @@ stdCreateEvent storage req = do
   case result of
     Error   err   -> show400Error . J.encode $ CreationErrorJson err
     Success event -> do
-      liftIO $ writeEvent storage event
+      _ <- addEventM storage event -- We can safely ignore it as it isn't changed
       return $ ResponseBuilder created201 [] $ fromByteString ""
 
 -- | Create a tree if missing, create an event storage configured with that path
 -- and load the content inside the 'EventStorage'.
 stdInitStorage :: (StorableEvent e, EventPool l e, Monoid (l e))
-               => FSP.FilePath -> IO (EventStorage l e)
+               => FilePath -> IO (EventStorage l e)
 stdInitStorage path = do
-  checkPresence <- FSP.isDirectory path
-  unless checkPresence $ FSP.createTree path
-  storage <- newEventStorage mempty path
+  checkPresence <- doesDirectoryExist path
+  unless checkPresence $ createDirectoryIfMissing True path
+  storage <- newEventStorage path
   loadStorage storage
   return storage
 

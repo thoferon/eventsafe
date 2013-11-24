@@ -5,10 +5,13 @@ module Database.EventSafe.Types
   ( ResourceRef(..)
   , Resource(..)
   , EventPool(..)
+  , EventPoolM(..)
   , StorableEvent(..)
   ) where
 
-import Data.List
+import           Control.Monad
+
+import           Data.List
 import qualified Data.ByteString.Lazy as BSL
 
 -- | A type that can refer to a type of event.
@@ -43,6 +46,9 @@ class Resource e res where
 
 -- | A structure capable of storing events.
 class EventPool p e where
+  -- | A pool containing no events.
+  emptyPool :: p e
+
   -- | Filter the events concerning a resource (see 'Resource') specified by a reference (see 'ResourceRef').
   --
   -- 'filterEvent' is used to build a resource from its reference. The list of events is then passed to 'buildResource'. See 'getResource'.
@@ -65,6 +71,18 @@ class EventPool p e where
                -> Maybe res -- ^ The resulting resource if available.
   getResource pool ref = buildResource $ filterEvents pool ref
 
+-- | Same as 'EventPool' but in a monad.
+class Monad m => EventPoolM m p e where
+  -- | See 'emptyPool'.
+  emptyPoolM :: m (p e)
+  -- | See 'filterEvents'.
+  filterEventsM :: ResourceRef e ref => p e -> ref -> m [e]
+  -- | See 'addEvent'.
+  addEventM :: p e -> e -> m (p e)
+  -- | See 'getResource'.
+  getResourceM :: (ResourceRef e ref, Resource e res) => p e -> ref -> m (Maybe res)
+  getResourceM pool ref = buildResource `liftM` filterEventsM pool ref
+
 -- | A type of event that can be stored on disk.
 class Ord e => StorableEvent e where
   -- | Encode an event to a lazy 'ByteString'.
@@ -73,5 +91,6 @@ class Ord e => StorableEvent e where
   decode :: BSL.ByteString -> Maybe e
 
 instance Ord e => EventPool [] e where
+  emptyPool             = []
   filterEvents pool ref = filter (flip concerns ref) pool
-  addEvent = flip insert
+  addEvent              = flip insert

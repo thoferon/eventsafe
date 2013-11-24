@@ -2,18 +2,14 @@ module Database.EventSafe
   ( ResourceRef(..)
   , Resource(..)
   , EventPool(..)
+  , EventPoolM(..)
   , EventStorage(..)
   , StorableEvent(..)
   , ESTVar
   -- * STM transactions to read and write events
   , writeEventSTM
-  -- * IO actions to deal with concurrency
-  , readResourceMem
-  , writeEventMem
   -- * IO actions for storage
   , newEventStorage
-  , readResource
-  , writeEvent
   , loadStorage
   -- * Template Haskell
   , mkApp

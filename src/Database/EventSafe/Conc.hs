@@ -1,28 +1,32 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+
 module Database.EventSafe.Conc
   ( ESTVar
   , writeEventSTM
-  , readResourceMem
-  , writeEventMem
   ) where
 
 import Control.Concurrent.STM
+import Control.Monad
+import Control.Monad.Trans
+
 import Database.EventSafe.Types
 
-type ESTVar p e = TVar (p e)
+newtype ESTVar p e = ESTVar (TVar (p e))
 
--- | A transaction that writes an event to a 'TVar' holding an 'EventPool'.
-writeEventSTM :: EventPool p e => TVar (p e) -> e -> STM ()
-writeEventSTM poolVar event = do
+instance (MonadIO m, EventPool p e) => EventPoolM m (ESTVar p) e where
+  emptyPoolM = ESTVar `liftM` liftIO (newTVarIO emptyPool)
+
+  filterEventsM (ESTVar poolVar) ref = do
+    pool <- liftIO $ atomically $ readTVar poolVar
+    return $ filterEvents pool ref
+
+  addEventM pool event = do
+    liftIO $ atomically $ writeEventSTM pool event
+    return pool
+
+-- | A transaction that writes an event to a 'ESTVar' holding an 'EventPool'.
+writeEventSTM :: EventPool p e => ESTVar p e -> e -> STM ()
+writeEventSTM (ESTVar poolVar) event = do
   pool <- readTVar poolVar
   writeTVar poolVar $ addEvent pool event
-
--- | Read a resource from an 'TVar' holding an 'EventPool'.
-readResourceMem :: (ResourceRef e ref, Resource e res, EventPool p e)
-                => TVar (p e) -> ref -> IO (Maybe res)
-readResourceMem poolVar ref = do
-  pool <- atomically $ readTVar poolVar
-  return $ getResource pool ref
-
--- | Write an event to a 'TVar' holding an 'EventPool'.
-writeEventMem :: EventPool p e => TVar (p e) -> e -> IO ()
-writeEventMem poolVar event = atomically $ writeEventSTM poolVar event
