@@ -1,5 +1,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE BangPatterns #-}
 
 module Database.EventSafe.Types
   ( ResourceRef(..)
@@ -7,6 +8,7 @@ module Database.EventSafe.Types
   , EventPool(..)
   , EventPoolM(..)
   , StorableEvent(..)
+  , PoolPair(..)
   ) where
 
 import           Control.Monad
@@ -56,12 +58,13 @@ class EventPool p e where
                => p e -- ^ The pool of events.
                -> ref -- ^ The reference to the resource.
                -> [e] -- ^ The events concerning this resource.
-  -- | Add an event to the pool.
-  addEvent     :: p e -- ^ The pool of events.
-               -> e   -- ^ The event to be added.
-               -> p e -- ^ A new version of the pool with the additional event.
 
-  -- | Get a resource from an 'EventPool'
+  -- | Add an event to the pool.
+  addEvent :: p e -- ^ The pool of events.
+           -> e   -- ^ The event to be added.
+           -> p e -- ^ A new version of the pool with the additional event.
+
+  -- | Get a resource from an 'EventPool'.
   --
   -- The default implementation uses 'filterEvents' and 'buildResource' in order to
   -- get the events concerning a resource and build it.
@@ -83,7 +86,7 @@ class Monad m => EventPoolM m p e where
   getResourceM :: (ResourceRef e ref, Resource e res) => p e -> ref -> m (Maybe res)
   getResourceM pool ref = buildResource `liftM` filterEventsM pool ref
 
--- | A type of event that can be stored on disk.
+-- | A type of event that can be stored on disc.
 class Ord e => StorableEvent e where
   -- | Encode an event to a lazy 'ByteString'.
   encode :: e -> BSL.ByteString
@@ -94,3 +97,29 @@ instance Ord e => EventPool [] e where
   emptyPool             = []
   filterEvents pool ref = filter (flip concerns ref) pool
   addEvent              = flip insert
+
+-- | A combinaison of two pools which is itself an 'EventPool'.
+data PoolPair a b e = PoolPair
+  { leftPool  :: !(a e) -- ^ The fast pool, that's the one that is going to be queried.
+  , rightPool :: !(b e) -- ^ A redundant pool.
+  }
+
+instance (EventPool a e, EventPool b e) => EventPool (PoolPair a b) e where
+  emptyPool             = PoolPair emptyPool emptyPool
+  filterEvents pair ref = filterEvents (leftPool pair) ref
+  addEvent pair event   = PoolPair
+    (addEvent (leftPool pair) event)
+    (addEvent (rightPool pair) event)
+
+instance (EventPoolM m a e, EventPoolM m b e) => EventPoolM m (PoolPair a b) e where
+  emptyPoolM = do
+    a <- emptyPoolM
+    b <- emptyPoolM
+    return $ PoolPair a b
+
+  filterEventsM pair ref = filterEventsM (leftPool pair) ref
+
+  addEventM pair event = do
+    a <- addEventM (leftPool pair)  event
+    b <- addEventM (rightPool pair) event
+    return $ PoolPair a b

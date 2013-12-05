@@ -20,6 +20,7 @@ library
   exposed-modules:   Database.EventSafe
                    , Database.EventSafe.Types
                    , Database.EventSafe.Conc
+                   , Database.EventSafe.DiscPool
                    , Database.EventSafe.Storage
                    , Database.EventSafe.HTTP
                    , Database.EventSafe.HTTP.Client
@@ -43,6 +44,9 @@ library
                    , attoparsec-conduit ==1.0.*
                    , network
                    , HTTP >= 4000.1
+                   , monad-loops
+                   , deepseq
+                   , containers
 
 source-repository head
   type:              darcs
@@ -70,6 +74,9 @@ test-suite unit
                    , attoparsec-conduit ==1.0.*
                    , network
                    , HTTP >= 4000.1
+                   , monad-loops
+                   , deepseq
+                   , containers
                    , hspec
 
 benchmark bench
@@ -95,4 +102,6 @@ benchmark bench
                    , network
                    , HTTP >= 4000.1
                    , criterion
+                   , containers
                    , deepseq
+                   , monad-loops

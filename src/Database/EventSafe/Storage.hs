@@ -19,7 +19,7 @@ import           Control.Monad.Trans
 import           Database.EventSafe.Conc
 import           Database.EventSafe.Types
 
--- | A data structure representing a storage of events on disk together with information about storage in memory.
+-- | A data structure representing a storage of events on disc together with information about storage in memory.
 data EventStorage p e
   -- | The first argument is a 'TVar' holding an 'EventPool' of events,
   -- the second is the directory those events should be read from / written to.
