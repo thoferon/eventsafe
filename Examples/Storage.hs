@@ -22,8 +22,7 @@ main = do
   dir <- getLine
   createDirectoryIfMissing True dir
 
-  storage <- newEventStorage dir
-  loadStorage storage
+  storage <- loadEventStorage dir 100
 
   handleQuery storage
 

@@ -19,7 +19,7 @@ import qualified Data.ByteString.Lazy.Char8 as BSL
 
 import           System.Directory
 
-import           Database.EventSafe.Storage
+import           Database.EventSafe.DiscPool
 import           Database.EventSafe.Types
 
 import           Blaze.ByteString.Builder
@@ -264,8 +264,7 @@ stdInitStorage :: (StorableEvent e, EventPool l e, Monoid (l e))
 stdInitStorage path = do
   checkPresence <- doesDirectoryExist path
   unless checkPresence $ createDirectoryIfMissing True path
-  storage <- newEventStorage path
-  loadStorage storage
+  storage <- loadEventStorage path 100
   return storage
 
 storageN :: Name

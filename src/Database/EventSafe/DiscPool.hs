@@ -5,7 +5,13 @@
 
 module Database.EventSafe.DiscPool
   ( DiscPool
+  , EventStorage
   , makeDiscPool
+  , loadEventStorage
+  -- TODO: solve this with a module Internal (for tests)
+  , IndexItem(..)
+  , planMerges
+  , allMerges
   ) where
 
 import           Data.Bits
@@ -24,6 +30,8 @@ import           System.Directory
 import           System.FilePath
 import           System.IO
 
+import           Database.EventSafe.Conc
+import           Database.EventSafe.PoolPair
 import           Database.EventSafe.Types
 
 -- | An 'EventPool' stored on disc.
@@ -258,3 +266,22 @@ removeOldFiles pool = do
   where
     notHidden :: FilePath -> Bool
     notHidden = (/= '.') . head
+
+--------------------------------------------------------------------------------
+
+-- | An 'EventPool' which is a 'ESTvar' backed up on disc.
+type EventStorage p e = PoolPair (ESTVar p) DiscPool e
+
+-- | Convenient function to create a new empty 'EventStorage'.
+loadEventStorage :: (MonadIO m, EventPool p e, StorableEvent e)
+                => FilePath -- ^ Directory where to store data.
+                -> Int      -- ^ Used to merge files, see 'DiscPool'.
+                -> m (EventStorage p e)
+loadEventStorage path n = liftIO $ do
+  discPool   <- makeDiscPool path n
+  estvarPool <- emptyPoolM
+  files      <- getFiles discPool
+  forM_ files $ \p -> do
+    events <- readEvents p
+    mapM_ (addEventM estvarPool) events
+  return $ PoolPair estvarPool discPool
