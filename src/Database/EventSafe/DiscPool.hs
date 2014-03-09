@@ -16,9 +16,10 @@ module Database.EventSafe.DiscPool
 
 import           Data.Bits
 import           Data.Char
-import           Data.Digest.Pure.MD5 (md5)
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import qualified Data.Set                   as S
+import qualified Data.UUID                  as UUID
+import qualified Data.UUID.V4               as UUID
 
 import           Control.DeepSeq
 import           Control.Exception
@@ -171,8 +172,7 @@ previousIndexPath = flip addExtension "prev" . indexPath
 writeEvent :: StorableEvent e => DiscPool e -> e -> IO ()
 writeEvent pool event = do
   let encodedEvent = eventToGroup event
-      md5Hash      = show $ md5 encodedEvent
-      path         = groupsDir pool </> md5Hash
+  path <- randomGroupFilePath pool
   changeIndex True pool $ \index -> do
     BSL.writeFile path encodedEvent
     return $ index ++ [IndexItem path 1]
@@ -232,8 +232,7 @@ mergeGroupFiles pool@(DiscPool _ miMax) = do
 writeNewGroupFile :: DiscPool e -> [IndexItem] -> IO IndexItem
 writeNewGroupFile pool groupFiles = do
     contents <- BSL.concat `liftM` mapM (\(IndexItem p _) -> BSL.readFile p) groupFiles
-    let md5Hash   = show $ md5 contents
-        groupPath = groupsDir pool </> md5Hash
+    groupPath <- randomGroupFilePath pool
     BSL.writeFile groupPath contents
     return $ IndexItem groupPath $ totalSize groupFiles
   where totalSize = sum . map (\(IndexItem _ s) -> s)
@@ -249,6 +248,11 @@ eventToGroup event =
                     c = chr $ fromIntegral (n `shift` (-16))
                     d = chr $ fromIntegral (n `shift` (-24))
                 in BSL.pack [a,b,c,d]
+
+randomGroupFilePath :: DiscPool e => IO FilePath
+randomGroupFilePath pool = do
+  filename <- UUID.toString `liftM` UUID.nextRandom
+  return $ groupsDir pool </> filename
 
 -- | Remove group files which are neiher in index nor in index.prev.
 removeOldFiles :: DiscPool e -> IO ()

@@ -22,8 +22,6 @@ import           System.Directory
 import           Database.EventSafe.DiscPool
 import           Database.EventSafe.Types
 
-import           Blaze.ByteString.Builder
-
 import           Network.HTTP.Types.Method
 import           Network.HTTP.Types.Status
 import           Network.Wai
@@ -186,7 +184,7 @@ mkResourceApp endpoint = do
 -- >           mRes <- getResourceM storage ref
 -- >           case mRes :: Maybe YourResource of
 -- >             Nothing  -> show404Error
--- >             Just res -> return . ResponseBuilder ok200 [] . fromLazyByteString. J.encode $ res
+-- >             Just res -> return . responseLBS ok200 [] . J.encode $ res
 mkResourceAppExp :: ResourceEndpoint -> Q Exp
 mkResourceAppExp endpoint = do
   getResourceME         <- [| getResourceM |]
@@ -195,7 +193,7 @@ mkResourceAppExp endpoint = do
   nothingP              <- [p| Nothing |]
   show400ErrorNoRefE    <- [| show400Error "{\"error\":\"no_ref_passed\",\"detail\":\"No GET paramater 'ref' has been passed.\"}" |]
   show404ErrorE         <- [| show404Error |]
-  returnEncodedFunE     <- [| return . ResponseBuilder ok200 [] . fromLazyByteString. J.encode |]
+  returnEncodedFunE     <- [| return . responseLBS ok200 [] . J.encode |]
   stringT               <- [t| String |]
   show400ErrorRefErrorE <- [| show400Error . (\errToBePacked -> "{\"error\":\"ref_error\",\"detail\":\"" <> BSL.pack errToBePacked <> "\"}") |] -- FIXME : Remove this horror
 
@@ -238,12 +236,12 @@ mkResourceAppExp endpoint = do
     ]
 
 -- | A 404 'Response' ready for WAI.
-show404Error :: ResourceT IO Response
-show404Error = return $ ResponseBuilder notFound404 [] $ fromByteString ""
+show404Error :: IO Response
+show404Error = return $ responseLBS notFound404 [] ""
 
 -- | A 400 'Response' ready for WAI wih a customisable body.
-show400Error :: BSL.ByteString -> ResourceT IO Response
-show400Error = return . ResponseBuilder badRequest400 [] . fromLazyByteString
+show400Error :: BSL.ByteString -> IO Response
+show400Error = return . responseLBS badRequest400 []
 
 -- | A WAI 'Application' for handling POST /create-event.
 stdCreateEvent :: (FromJSON e, ToJSON e, StorableEvent e, EventPool l e)
@@ -255,7 +253,7 @@ stdCreateEvent storage req = do
     Error   err   -> show400Error . J.encode $ CreationErrorJson err
     Success event -> do
       _ <- addEventM storage event -- We can safely ignore it as it isn't changed
-      return $ ResponseBuilder created201 [] $ fromByteString ""
+      return $ responseLBS created201 [] ""
 
 -- | Create a tree if missing, create an event storage configured with that path
 -- and load the content inside the 'EventStorage'.

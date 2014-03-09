@@ -4,7 +4,11 @@
 name:                eventsafe
 version:             0.1.0.0
 synopsis:            A type-safe event store library
-description:         EventSafe is a small library allowing to quickly build HTTP servers to manage events and resources. You can write events in an event store and retrieve a resource from those events given a resource reference.
+description:         EventSafe is a small library allowing to create event stores, i.e. structures to which events can be added and resources extracted from a resource reference.
+                     .
+                     For example, for a list of event such as user subscription and profile edition, one could extract a user (@Resource@) given an e-mail (@ResourceReference@).
+                     .
+                     EventSafe provides different back-ends from a simple data structure to a concurrent disk-backed store. Those can be served via HTTP easily thank to @Database.EventSafe.HTTP@.
 homepage:            http://hub.darcs.net/thoferon/eventsafe
 bug-reports:         http://hub.darcs.net/thoferon/eventsafe/issues
 license:             MIT
@@ -32,10 +36,9 @@ library
                    , filepath
                    , directory
                    , stm ==2.4.*
-                   , wai ==1.4.*
-                   , warp ==1.3.*
+                   , wai ==2.*
+                   , warp ==2.*
                    , http-types
-                   , blaze-builder
                    , template-haskell
                    , conduit ==1.0.*
                    , text
@@ -47,6 +50,7 @@ library
                    , monad-loops
                    , deepseq
                    , containers
+                   , uuid >= 1.3.3
 
 source-repository head
   type:              darcs
@@ -55,7 +59,7 @@ source-repository head
 test-suite unit
   type:              exitcode-stdio-1.0
   main-is:           Suite.hs
-  hs-source-dirs:    src, tests
+  hs-source-dirs:    src, tests, .
   build-depends:     base >= 4 && < 5
                    , pureMD5 ==2.1.*
                    , bytestring
@@ -77,6 +81,7 @@ test-suite unit
                    , monad-loops
                    , deepseq
                    , containers
+                   , uuid >= 1.3.3
                    , hspec
 
 benchmark bench
@@ -106,3 +111,4 @@ benchmark bench
                    , deepseq
                    , monad-loops
                    , temporary
+                   , uuid >= 1.3.3

@@ -16,7 +16,7 @@ import qualified Data.ByteString.Lazy as BSL
 
 -- | A type that can refer to a type of event.
 --
--- This typeclass is used to identify a resource and filter wath events concern this specific resource.
+-- This typeclass is used to identify a resource and filter which events concern this specific resource.
 class ResourceRef e ref where
   -- ^ A predicate used to know if an event concerns a resource.
   concerns :: e   -- ^ The event.
@@ -28,6 +28,7 @@ class Resource e res where
   -- | Build a resource from the first chronological event concerning this resource.
   firstEvent :: e         -- ^ The event.
              -> Maybe res -- ^ The resulting resource if available.
+
   -- | Build a resource from a previous version of this version and an event.
   -- This event will be /applied/ to the resource.
   applyEvent :: e         -- ^ The event.
